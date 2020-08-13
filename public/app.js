@@ -11,5 +11,15 @@ document.getElementById('load').addEventListener('click', () => {
   console.log('load')
   fetch('https://jsonplaceholder.cypress.io/users?_limit=3')
     .then(r => r.json())
-    .then(console.table)
+    .then(users => {
+      console.table(users)
+      const list = users
+        .map(user => `<li class="user">${user.id} - ${user.name}</li>`)
+        .join('\n')
+      document.getElementById('results').innerHTML = `
+        <ul>
+          ${list}
+        </ul>
+      `
+    })
 })
