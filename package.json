@@ -1,0 +1,20 @@
+{
+  "name": "load-sw-from-cypress",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "serve public",
+    "cy:open": "cypress open",
+    "dev": "start-test 5000 cy:open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "cypress": "4.12.1",
+    "serve": "11.3.2",
+    "start-server-and-test": "1.11.3"
+  }
+}
