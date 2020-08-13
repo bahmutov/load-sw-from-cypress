@@ -10,6 +10,39 @@ self.addEventListener('activate', function (event) {
   clients.claim();
 })
 
+let mocks = {}
+
+self.addEventListener('message', (event) => {
+  console.log('sw: message', event.data)
+
+  switch (event.data) {
+    case 'clear': {
+      mocks = {};
+      return;
+    }
+
+    case 'list': {
+      // TODO: would it make more sense to use self-addressed?
+      event.source.postMessage({
+        cmd: 'list',
+        mocks: mocks
+      }, '*');
+      return;
+    }
+
+    default: {
+      if (event.data.url) {
+        console.log('registering mock response for', event.data.method, 'url', event.data.url);
+
+        mocks = mocks || {};
+        mocks[event.data.url] = event.data;
+      } else {
+        console.log('sw: ignoring message', event.data)
+      }
+    }
+  }
+})
+
 self.addEventListener('fetch', function onServiceWorkerFetch(event) {
   console.log('sw: fetch event %s %s %s %s',
     event.request.method, event.request.url, event.request.cache, event.request.mode)
