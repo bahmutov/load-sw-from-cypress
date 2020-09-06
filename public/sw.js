@@ -20,6 +20,7 @@ self.addEventListener('message', (event) => {
 
   switch (event.data) {
     case 'clear': {
+      event.source.postMessage('cleared')
       mocks = {};
       return;
     }

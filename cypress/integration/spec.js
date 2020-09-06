@@ -3,13 +3,22 @@
 describe('App', () => {
   let sw = {}
 
-  // beforeEach(() => {
-  //   if (sw.reg && sw.reg.active) {
-  //     console.log('clearing mocks')
-  //     sw.reg.active.postMessage('clear')
-  //   }
-  //   cy.wait(1000)
-  // })
+  const clearMocks = () => {
+    cy.wrap(sw)
+      .then(_sw => {
+        if (_sw.reg && _sw.reg.active) {
+          console.log('clearing mocks')
+          _sw.reg.active.postMessage('clear')
+          cy.wrap(_sw).its('lastMessage').should('equal', 'cleared')
+        }
+    })
+  }
+
+  beforeEach(() => {
+    clearMocks()
+    // TODO: how to know when the SW has cleared
+    // cy.wait(1000)
+  })
 
   // https://love2dev.com/blog/how-to-uninstall-a-service-worker/
   function unregisterSWforWindow(win) {
@@ -17,7 +26,7 @@ describe('App', () => {
     .then(registrations => {
       console.log('removing %d registrations', registrations.length)
       return Cypress.Promise.mapSeries(registrations, (registration) =>
-        registration.unregister()
+        registration.unregister({immediate: true})
       )
     })
   }
@@ -35,49 +44,56 @@ describe('App', () => {
     cy.get('.user').should('have.length', 3)
   })
 
-  it.only('shows mock users', () => {
+  it('shows mock users', () => {
     cy.visit('/', {
       onBeforeLoad(win) {
         console.log('onBeforeLoad')
 
-        // unregisterSWforWindow(win)
+        unregisterSWforWindow(win).then(() => {
+          // three ways of loading a service worker
 
-        // three ways of loading a service worker
-
-        // 1:
-        // sw.js will come from the site's /
-        // capable of (scoped) intercepting application requests
-        // probably not what we want
-        win.navigator.serviceWorker.register('sw.js')
-          .then(reg => {
-            sw.reg = reg
-            console.log('SW registered! scope %s', reg.scope, reg)
-            console.log('this page has SW controller', navigator.serviceWorker.controller)
+          win.navigator.serviceWorker.addEventListener('message', event => {
+            console.log('message from SW', event.data)
+            sw.lastMessage = event.data
           })
-          .catch(err => console.log('Boo!', err));
 
-        // load OUR service worker into the web app
+          // 1:
+          // sw.js will come from the site's /
+          // capable of (scoped) intercepting application requests
+          // probably not what we want
+          win.navigator.serviceWorker.register('sw.js')
+            .then(reg => {
+              sw.reg = reg
+              console.log('SW registered! scope %s', reg.scope, reg)
+              console.log('this page has SW controller', navigator.serviceWorker.controller)
+            })
+            .catch(err => console.log('Boo!', err));
 
-        // 2:
-        // /__root/.../sw.js will be scoped to /__root/...
-        // which is NOT what we want
-        // we can try relaxing the scope to the top level /
-        // by adding header "Service-Worker-Allowed" "/" to the top page
-        // win.navigator.serviceWorker.register('/__root/public/sw.js', {scope: '/'})
+          // load OUR service worker into the web app
 
-        // 3:
-        // we could proxy /sw.js to SW script in the Cypress built-in routes
-        // win.navigator.serviceWorker.register('/__sw.js')
-        //   .then(reg => {
-        //     sw.reg = reg
-        //     console.log('SW registered! scope %s', reg.scope, reg)
-        //     console.log('this page has SW controller', navigator.serviceWorker.controller)
-        //   })
-        //   .catch(err => console.log('Boo!', err));
+          // 2:
+          // /__root/.../sw.js will be scoped to /__root/...
+          // which is NOT what we want
+          // we can try relaxing the scope to the top level /
+          // by adding header "Service-Worker-Allowed" "/" to the top page
+          // win.navigator.serviceWorker.register('/__root/public/sw.js', {scope: '/'})
 
-        // TODO prevent any other SW from registering on the page?
-        // https://glebbahmutov.com/blog/cypress-tips-and-tricks/#disable-serviceworker
+          // 3:
+          // we could proxy /sw.js to SW script in the Cypress built-in routes
+          // win.navigator.serviceWorker.register('/__sw.js')
+          //   .then(reg => {
+          //     sw.reg = reg
+          //     console.log('SW registered! scope %s', reg.scope, reg)
+          //     console.log('this page has SW controller', navigator.serviceWorker.controller)
+          //   })
+          //   .catch(err => console.log('Boo!', err));
+
+          // TODO prevent any other SW from registering on the page?
+          // https://glebbahmutov.com/blog/cypress-tips-and-tricks/#disable-serviceworker
+        })
       }
+    }).then(() => {
+      console.log('after cy.visit')
     })
 
     cy.contains('h1', 'Load SW')
@@ -104,10 +120,7 @@ describe('App', () => {
     // only two mock users
     cy.get('.user').should('have.length', 2)
 
-
-    cy.wrap(sw)
-      .its('reg.active')
-      .invoke('postMessage', 'clear')
+    clearMocks()
 
     // now when we fetch, the true data is returned
     cy.log('**no mocks**')
