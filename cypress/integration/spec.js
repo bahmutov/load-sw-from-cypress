@@ -4,12 +4,14 @@ describe('App', () => {
   let sw = {}
 
   const clearMocks = () => {
-    cy.wrap(sw)
+    cy.log('clearing SW mocks')
+    cy.wrap(sw, {log: false})
       .then(_sw => {
         if (_sw.reg && _sw.reg.active) {
           console.log('clearing mocks')
           _sw.reg.active.postMessage('clear')
-          cy.wrap(_sw).its('lastMessage').should('equal', 'cleared')
+          // wait until SW responds back
+          cy.wrap(_sw, {log: false}).its('lastMessage').should('equal', 'cleared')
         }
     })
   }
@@ -37,8 +39,7 @@ describe('App', () => {
 
   // afterEach(unregisterSW)
 
-  // SKIP because we need to remove any remaining SW
-  it.skip('shows fetched users', () => {
+  it('shows fetched users (no proxy)', () => {
     cy.visit('/')
     cy.contains('button', 'Load').click()
     cy.get('.user').should('have.length', 3)
@@ -121,6 +122,7 @@ describe('App', () => {
     cy.get('.user').should('have.length', 2)
 
     clearMocks()
+    cy.wait(1000) // for demo
 
     // now when we fetch, the true data is returned
     cy.log('**no mocks**')
