@@ -1,3 +1,5 @@
+console.log('sw: ./cypress/sw.js')
+
 self.addEventListener('install', function () {
   console.log('sw: install')
   return self.skipWaiting()

@@ -1,4 +1,6 @@
 // DO NOT USE
+console.log('sw: ./public/sw.js')
+
 self.addEventListener('install', function () {
   console.log('sw: install')
   return self.skipWaiting()
@@ -55,5 +57,49 @@ self.addEventListener('fetch', function onServiceWorkerFetch(event) {
     return;
   }
 
-  event.respondWith(fetch(event.request))
+  mocks = mocks || {};
+  let responded
+
+  Object.keys(mocks).forEach(function (url) {
+    if (responded) {
+      return
+    }
+
+    // var urlReg = new RegExp(url);
+    // if (urlReg.test(event.request.url)) {
+    if (url === event.request.url) {
+      console.log('sw: matched url %s to mock %s', event.request.url, url)
+      var mockData = mocks[url];
+      var options = mockData.options || {};
+
+      var responseOptions = {
+        status: options.code || options.status || options.statusCode,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      };
+
+      var body = JSON.stringify(options.body || options.data);
+      var response = new Response(body, responseOptions);
+      responded = true
+
+      const delay = options.timeout || options.delay
+      if (delay) {
+        console.log('sw: delaying response by %dms', delay)
+        return event.respondWith(new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve(response);
+          }, delay);
+        }));
+
+      } else {
+        return event.respondWith(response);
+      }
+    }
+  });
+
+  if (!responded) {
+    event.respondWith(fetch(event.request))
+  }
 })
